@@ -178,3 +178,86 @@ app/
 + CDN 检查：若页面已静态化（SSG），直接返回缓存 HTML
 + Node.js 处理动态请求：调用 db.product.find(42) 获取数据；渲染 app/products/[id]/page.tsx 为 HTML；注入 `<script> `标签指向客户端 JS
 + 浏览器接收：立即显示静态html,异步加载js完成hydrate(恢复交互性)
+
+------
+13.Vercel 是 Next.js 官方推荐的云部署平台，专为现代前端和全栈应用优化.
++ 自动化全球部署,一键发布：关联 Git 仓库后，每次 git push 自动触发构建和部署。边缘网络：将静态资源（HTML/CSS/JS）分发到全球 100+ 个 CDN 节点，实现毫秒级加载。
++ 智能托管 Next.js 全栈能力。
+|功能|Vercel的实现方式|传统服务器相比|
+|----|----|----|
+|服务渲染（ssr）|自动将getServerSideProps转为Serverless Function|需手动配置nodejs集群|
+|API路由|page/api/*或app/api/*自动转为无服务函数|需自动转为无服务函数|需自建后端服务|
+|静态生成(SSG)|预渲染页面直接存入CDN|需配置静态文件服务器|
+
++  深度 Next.js 集成：
+
+✅增量静态再生 (ISR)：动态页面按需重新生成并缓存：
+```typescript
+// 页面配置
+export const revalidate = 60; // 每60秒重新验证数据
+```
+✅图像优化：自动应用next/image的WebP/AVIF 转换和尺寸优化。
+
+✅边缘中间件：通过 middleware.ts 在 CDN 边缘运行逻辑（如 A/B 测试、鉴权）。
++ 开发者体验优化
+
+✅ 预览环境：每个 Git 分支自动生成独立可访问的 URL（用于代码审查）。
+
+✅ 性能监控：内置 Lighthouse 评分和 Web Vitals 跟踪。
+
+✅ Serverless 免运维：自动扩展函数实例，无需管理服务器。
+
++ 典型工作流程
+
+✅ 开发阶段：本地 next dev 调试
+✅ 提交代码：git push main
+✅ Vercel 自动化：安装依赖（npm install），构建项目（npm run build）拆分资源（静态文件 → CDN，动态路由 → Serverless）
+✅ 全球发布：DNS 自动配置 + SSL 证书生成
+------
+
+13.vercel适用于需要Nextjs全栈能力（SSR/ISR/API）,追求极简部署流程和全球性能，以及中小项目或快速原型开发的场景。
+
+------
+14.Nextjs获取数据的方式有2种。
++ API 端点开发：构建 API 接口时需编写数据库交互逻辑（传统模式）：也就是常见的终端请求api获取数据后，再在终端把获取的数据传递给react
+```typescript
+// 示例：Next.js API 路由 (位于 `app/api/users/route.ts`)
+export async function GET() {
+  // 此代码在服务端 Node.js 环境运行，浏览器看不到
+  const users = await sql`SELECT * FROM users`; // 直接执行 SQL
+  return Response.json(users); // 仅返回结果给浏览器
+}
+```
++ React 服务端组件优化方案,使用 Next.js 的 Server Components 时，可直接在服务端查询数据库，无需额外 API 层
+```typescript
+ // app/page.tsx
+export default async function Page() {
+  const posts = await prisma.post.findMany(); // 直接操作数据库
+  return <PostList posts={posts} />; 
+}
+```
+两种安全数据获取方式对比
+|方式|执行环境|优点|适用场景|
+|----|----|----|----|
+|API 端点查询|服务端|隐藏数据库细节，可做权限控制|需要开放给第三方调用的接口|
+|Server Component 直连|服务端|减少网络延迟，简化代码架构|Next.js 应用内部使用|
+
+-------
+15.React 服务端组件（Server Components）具有以下优势：
++ 原生异步支持：服务端组件直接支持 JavaScript Promise，无需借助 useEffect、useState 或第三方数据请求库，即可使用 async/await 语法：
+```typescript
+// 直接使用异步操作（无需客户端 Hook）
+export default async function Page() {
+  const data = await fetchData();
+  return <div>{data}</div>;
+}
+```
++ 服务端执行:所有数据获取和复杂逻辑保留在服务端，仅向客户端发送最终结果： 减少客户端计算负担,隐藏敏感逻辑（如数据库查询）
++ 直连数据库,无需额外编写 API 层代码，直接在组件中访问数据库：
+```typescript
+// 安全示例：服务端直连数据库
+export default async function Page() {
+  const posts = await prisma.post.findMany(); // 直接操作 ORM
+  return <PostList posts={posts} />;
+}
+```
