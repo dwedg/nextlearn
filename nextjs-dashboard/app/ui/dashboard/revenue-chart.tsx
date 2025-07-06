@@ -2,18 +2,22 @@ import { generateYAxis } from '@/app/lib/utils';
 import { CalendarIcon } from '@heroicons/react/24/outline';
 import { lusitana } from '@/app/ui/fonts';
 import { Revenue } from '@/app/lib/definitions';
-
+import {fetchRevenue} from '@/app/lib/data'
 // This component is representational only.
 // For data visualization UI, check out:
 // https://www.tremor.so/
 // https://www.chartjs.org/
 // https://airbnb.io/visx/
+//remove the props
+// {
+//   revenue,
+// }: {
+//   revenue: Revenue[];
+// }
 
-export default async function RevenueChart({
-  revenue,
-}: {
-  revenue: Revenue[];
-}) {
+export default async function RevenueChart() {
+  //将这个数据获取很慢的请求放到一个单独的组件，包裹起来，这样streaming加载这个组件，有更好的体验，不会造成整个页面阻塞
+  const revenue = await fetchRevenue()
   const chartHeight = 350;
   // NOTE: Uncomment this code in Chapter 7
 
